@@ -21,9 +21,9 @@ TEST_CASE( "TestBufferSystem", "[BufferSystem]" )
    mc::BufferSystem bs( MPI_COMM_WORLD, 42 );
 
    // the rank to which we send
-   std::size_t dst_rank = ( rank + 1 ) % size;
+   int dst_rank = ( rank + 1 ) % size;
    // the rank from which we receive information
-   std::size_t src_rank = rank > 0 ? ( rank - 1 ) % size : size - 1;
+   int src_rank = rank > 0 ? ( rank - 1 ) % size : size - 1;
 
    for ( uint k = 0; k < 8; k += 1 )
    {
@@ -43,13 +43,16 @@ TEST_CASE( "TestBufferSystem", "[BufferSystem]" )
          auto& buf = bs.get_receive_buffer( src_rank );
 
          // unpack data
-         size_t other_rank, a;
+         int other_rank, a;
          double b;
          buf >> other_rank;
          buf >> a;
          buf >> b;
 
          // check correctness
+        std::cout << other_rank << " " << src_rank << std::endl;
+        std::cout << a << " " << k << std::endl;
+        std::cout << b << " " << 42. + k << std::endl;
          REQUIRE( other_rank == src_rank );
          REQUIRE( a == k );
          REQUIRE( b == 42. + k );

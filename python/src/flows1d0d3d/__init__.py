@@ -1,1 +1,0 @@
-from ._core import __doc__, __version__, LinearizedHeartToBreast1DSolver, FullyCoupledHeartToBreast1DSolver, initialize, finalize, SimpleLinearizedSolver

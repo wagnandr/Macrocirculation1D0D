@@ -175,13 +175,6 @@ if (${LibMacrocirculation_Enable_Documentation})
     add_subdirectory(docs)
 endif ()
 
-# python bindings
-set(LibMacrocirculation_Enable_Python_Bindings OFF CACHE BOOL "Adds the python bindings to our build process")
-if (${LibMacrocirculation_Enable_Python_Bindings})
-    add_subdirectory(${CMAKE_SOURCE_DIR}/external/pybind11)
-    add_subdirectory(${CMAKE_SOURCE_DIR}/python)
-endif ()
-
 # Packaging support
 set(CPACK_PACKAGE_VENDOR "wagneran@ma.tum.de")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Package for calculating blood flow.")

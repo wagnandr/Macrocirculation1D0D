@@ -8,7 +8,6 @@
 #include "catch2/catch.hpp"
 #include "mpi.h"
 #include <memory>
-#include <petsc.h>
 #include <utility>
 
 #include "macrocirculation/communication/mpi.hpp"
@@ -17,7 +16,6 @@
 #include "macrocirculation/graph_partitioner.hpp"
 #include "macrocirculation/graph_storage.hpp"
 #include "macrocirculation/interpolate_to_vertices.hpp"
-#include "macrocirculation/petsc/petsc_ksp.hpp"
 
 #include "create_3_vessel_network.hpp"
 

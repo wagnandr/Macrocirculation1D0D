@@ -11,8 +11,6 @@
 #include "dof_map.hpp"
 #include "fe_type.hpp"
 #include "graph_storage.hpp"
-#include "implicit_transport_solver.hpp"
-#include "petsc/petsc_vec.hpp"
 
 namespace macrocirculation {
 
@@ -35,61 +33,6 @@ void add_discontinuous_points(const std::vector<Point> &embedded_points, std::ve
     points.push_back(embedded_points[micro_edge_id + 1]);
   }
 }
-
-void interpolate_transformation(const MPI_Comm comm,
-                             const GraphStorage &graph,
-                             const DofMap &map,
-                             const std::size_t component,
-                             const PetscVec &dof_vector,
-                             std::function< double(double, const Edge&) > trafo,
-                             std::vector<Point> &points,
-                             std::vector<double> &interpolated) {
-  points.clear();
-  interpolated.clear();
-
-  std::vector<std::size_t> dof_indices;
-  std::vector<double> dof_vector_local;
-  std::vector<double> evaluated_at_qps;
-
-  for (auto e_id : graph.get_active_edge_ids(mpi::rank(comm))) {
-    auto edge = graph.get_edge(e_id);
-
-    // we only write out embedded vessel segments
-    if (!edge->has_embedding_data())
-      continue;
-    const auto &embedding = edge->get_embedding_data();
-
-    auto local_dof_map = map.get_local_dof_map(*edge);
-
-    if (embedding.points.size() == 2 && local_dof_map.num_micro_edges() > 1)
-      linear_interpolate_points(embedding.points[0], embedding.points[1], local_dof_map.num_micro_edges(), points);
-    else if (embedding.points.size() == local_dof_map.num_micro_edges() + 1)
-      add_discontinuous_points(embedding.points, points);
-    else
-      throw std::runtime_error("this type of embedding is not implemented");
-
-    FETypeNetwork fe(create_trapezoidal_rule(), local_dof_map.num_basis_functions() - 1);
-
-    dof_indices.resize(local_dof_map.num_basis_functions());
-    dof_vector_local.resize(local_dof_map.num_basis_functions());
-    evaluated_at_qps.resize(fe.num_quad_points());
-
-    const auto &param = edge->get_physical_data();
-    const double h = param.length / local_dof_map.num_micro_edges();
-
-    fe.reinit(h);
-
-    for (std::size_t micro_edge_id = 0; micro_edge_id < local_dof_map.num_micro_edges(); micro_edge_id += 1) {
-      local_dof_map.dof_indices(micro_edge_id, component, dof_indices);
-      extract_dof(dof_indices, dof_vector, dof_vector_local);
-      const auto boundary_values = fe.evaluate_dof_at_boundary_points(dof_vector_local);
-
-      interpolated.push_back(trafo(boundary_values.left, *edge));
-      interpolated.push_back(trafo(boundary_values.right, *edge));
-    }
-  }
-}
-
 
 void interpolate_to_vertices(const MPI_Comm comm,
                              const GraphStorage &graph,
@@ -141,51 +84,6 @@ void interpolate_to_vertices(const MPI_Comm comm,
       interpolated.push_back(boundary_values.left);
       interpolated.push_back(boundary_values.right);
     }
-  }
-}
-
-void interpolate_to_vertices(MPI_Comm comm,
-                             const GraphStorage &graph,
-                             const UpwindProvider &upwind,
-                             double t,
-                             std::vector<Point> &points,
-                             std::vector<double> &interpolated) {
-  points.clear();
-  interpolated.clear();
-
-  std::vector<std::size_t> dof_indices;
-  std::vector<double> dof_vector_local;
-  std::vector<double> evaluated_at_qps;
-
-  for (auto e_id : graph.get_active_edge_ids(mpi::rank(comm))) {
-    auto edge = graph.get_edge(e_id);
-
-    // we only write out embedded vessel segments
-    if (!edge->has_embedding_data())
-      continue;
-    const auto &embedding = edge->get_embedding_data();
-
-    if (embedding.points.size() == 2 && edge->num_micro_edges() > 1)
-      linear_interpolate_points(embedding.points[0], embedding.points[1], edge->num_micro_edges(), points);
-    else if (embedding.points.size() == edge->num_micro_edges() + 1)
-      add_discontinuous_points(embedding.points, points);
-    else
-      throw std::runtime_error("this type of embedding is not implemented");
-
-    std::vector< double > upwinded_values_v( edge->num_micro_vertices() );
-
-    upwind.get_upwinded_values(t, *edge, upwinded_values_v );
-
-    interpolated.push_back(upwinded_values_v.front());
-
-    for (size_t k = 1; k <upwinded_values_v.size()-1; k+=1)
-    {
-      interpolated.push_back(upwinded_values_v[k]);
-      interpolated.push_back(upwinded_values_v[k]);
-    }
-
-    interpolated.push_back(upwinded_values_v.back());
-
   }
 }
 

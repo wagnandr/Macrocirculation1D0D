@@ -5,26 +5,20 @@
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "petsc.h"
 #include <chrono>
 #include <cxxopts.hpp>
 #include <memory>
 
-#include "macrocirculation/0d_boundary_conditions.hpp"
 #include "macrocirculation/communication/mpi.hpp"
 #include "macrocirculation/csv_vessel_tip_writer.hpp"
 #include "macrocirculation/dof_map.hpp"
 #include "macrocirculation/embedded_graph_reader.hpp"
 #include "macrocirculation/explicit_nonlinear_flow_solver.hpp"
-#include "macrocirculation/explicit_transport_solver.hpp"
 #include "macrocirculation/graph_csv_writer.hpp"
 #include "macrocirculation/graph_partitioner.hpp"
 #include "macrocirculation/graph_pvd_writer.hpp"
 #include "macrocirculation/graph_storage.hpp"
-#include "macrocirculation/implicit_linear_flow_solver.hpp"
-#include "macrocirculation/implicit_transport_solver.hpp"
 #include "macrocirculation/interpolate_to_vertices.hpp"
-#include "macrocirculation/nonlinear_flow_upwind_evaluator.hpp"
 #include "macrocirculation/quantities_of_interest.hpp"
 #include "macrocirculation/vessel_formulas.hpp"
 
@@ -33,7 +27,7 @@ namespace mc = macrocirculation;
 constexpr std::size_t degree = 2;
 
 int main(int argc, char *argv[]) {
-  CHKERRQ(PetscInitialize(&argc, &argv, nullptr, "solves linear flow problem"));
+  MPI_Init(&argc, &argv);
 
   {
     cxxopts::Options options(argv[0], "Nonlinear 1D solver");
@@ -46,7 +40,6 @@ int main(int argc, char *argv[]) {
       ("tau", "time step size", cxxopts::value<double>()->default_value(std::to_string(2.5e-4 / 16.)))                                                              //
       ("tau-out", "time step size for the output", cxxopts::value<double>()->default_value("1e-2"))                                                                 //
       ("t-end", "Endtime for simulation", cxxopts::value<double>()->default_value("5"))                                                                             //
-      ("update-interval-transport", "transport is only updated every nth flow step, where n is the update-interval?", cxxopts::value<size_t>()->default_value("5")) //
       ("h,help", "print usage");
     options.allow_unrecognised_options(); // for petsc
     auto args = options.parse(argc, argv);
@@ -98,21 +91,6 @@ int main(int argc, char *argv[]) {
     auto flow_solver = std::make_shared<mc::ExplicitNonlinearFlowSolver>(MPI_COMM_WORLD, graph, dof_map_flow, degree);
     flow_solver->use_ssp_method();
 
-    // auto dof_map_transport = std::make_shared<mc::DofMap>(graph->num_vertices(), graph->num_edges());
-    // dof_map_transport->create(MPI_COMM_WORLD, *graph, 1, degree, false);
-    // auto transport_solver = std::make_shared<mc::ExplicitTransportSolver>(MPI_COMM_WORLD, graph, dof_map_flow, dof_map_transport);
-
-    auto dof_map_transport = std::make_shared<mc::DofMap>(graph->num_vertices(), graph->num_edges());
-    dof_map_transport->create(MPI_COMM_WORLD, *graph, 1, degree, 0, true, [](const mc::Vertex &v) {
-      if (v.is_windkessel_outflow())
-        return 1;
-      return 0;
-    });
-
-    auto upwind_evaluator = std::make_shared<mc::NonlinearFlowUpwindEvaluator>(MPI_COMM_WORLD, graph, dof_map_flow);
-    auto variable_upwind_provider = std::make_shared<mc::UpwindProviderNonlinearFlow>(upwind_evaluator, flow_solver);
-    auto transport_solver = std::make_shared<mc::ImplicitTransportSolver>(MPI_COMM_WORLD, graph, dof_map_transport, variable_upwind_provider, degree);
-
     std::vector<mc::Point> points;
     std::vector<double> Q_vertex_values;
     std::vector<double> A_vertex_values;
@@ -127,7 +105,6 @@ int main(int argc, char *argv[]) {
     mc::GraphCSVWriter csv_writer(MPI_COMM_WORLD, args["output-directory"].as<std::string>(), "abstract_33_vessels", graph);
     csv_writer.add_setup_data(dof_map_flow, flow_solver->A_component, "a");
     csv_writer.add_setup_data(dof_map_flow, flow_solver->Q_component, "q");
-    csv_writer.add_setup_data(dof_map_transport, 0, "c");
     csv_writer.setup();
 
     mc::GraphPVDWriter pvd_writer(MPI_COMM_WORLD, args["output-directory"].as<std::string>(), "abstract_33_vessels");
@@ -154,19 +131,16 @@ int main(int argc, char *argv[]) {
     }
 
     double t = 0;
-    double t_transport = 0.0;
 
     const auto write_output = [&](){
       csv_writer.add_data("a", flow_solver->get_solution());
       csv_writer.add_data("q", flow_solver->get_solution());
-      csv_writer.add_data("c", transport_solver->get_solution());
       csv_writer.write(t);
 
       mc::interpolate_to_vertices(MPI_COMM_WORLD, *graph, *dof_map_flow, 0, flow_solver->get_solution(), points, Q_vertex_values);
       mc::interpolate_to_vertices(MPI_COMM_WORLD, *graph, *dof_map_flow, 1, flow_solver->get_solution(), points, A_vertex_values);
       mc::calculate_total_pressure(MPI_COMM_WORLD, *graph, *dof_map_flow, flow_solver->get_solution(), points, p_total_vertex_values);
       mc::calculate_static_pressure(MPI_COMM_WORLD, *graph, *dof_map_flow, flow_solver->get_solution(), points, p_static_vertex_values);
-      mc::interpolate_to_vertices(MPI_COMM_WORLD, *graph, *dof_map_transport, 0, transport_solver->get_solution(), points, c_vertex_values);
 
       pvd_writer.set_points(points);
       pvd_writer.add_vertex_data("Q", Q_vertex_values);
@@ -179,10 +153,6 @@ int main(int argc, char *argv[]) {
 
       vessel_tip_writer.write(t, flow_solver->get_solution());
     };
-
-    const size_t update_interval_transport = args["update-interval-transport"].as<size_t>();
-    if (mc::mpi::rank(MPI_COMM_WORLD) == 0)
-      std::cout << "updating transport every " << update_interval_transport << " interval" << std::endl;
 
     write_output();
 
@@ -200,15 +170,6 @@ int main(int argc, char *argv[]) {
       num_iteration += 1;
 
       t += tau;
-      if (it % update_interval_transport == 0) {
-        // std::cout << "t_transport = " << t_transport << std::endl;
-        variable_upwind_provider->init(t_transport + update_interval_transport * tau, flow_solver->get_solution());
-        transport_solver->solve(update_interval_transport * tau, t_transport + update_interval_transport * tau);
-        // transport_solver->apply_slope_limiter(t_transport + update_interval_transport * tau);
-        t_transport += update_interval_transport * tau;
-      }
-
-      assert(std::abs(t - t_transport) < 1e-12);
 
       if (it % output_interval == 0) {
         std::cout << "iter = " << it << ", t = " << t << std::endl;
@@ -228,5 +189,5 @@ int main(int argc, char *argv[]) {
     std::cout << "total time flow solver = " << flow_solution_time << ", average = " << flow_solution_time / num_iteration << ", iteration = " << num_iteration << std::endl;
   }
 
-  CHKERRQ(PetscFinalize());
+  MPI_Finalize();
 }

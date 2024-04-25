@@ -19,7 +19,6 @@ namespace macrocirculation {
 // forward declarations:
 class GraphStorage;
 class DofMap;
-class PetscVec;
 
 /*! @brief Serializes the pressures at the vessel tips to csv files which are structured with a meta json-file containing the time steps and vessel information.
  *
@@ -69,24 +68,6 @@ public:
     std::string filename,
     std::shared_ptr<GraphStorage> graph,
     std::shared_ptr<DofMap> dofmaps);
-
-  /*! @brief Writes the dofs of a 0D-Model for a Petsc vector.
-   *
-   * @param t The current time step to write.
-   * @param u Dof-vector with pressures.
-   */
-  void write(double t, const PetscVec &u);
-
-  /*! @brief Writes the dofs of a 0D-Model for a Petsc vector.
-   *
-   * @param t The current time step to write.
-   * @param u Dof-vector with quantities.
-   */
-  void write(double t, const std::vector<std::reference_wrapper<const PetscVec>> &u);
-
-  void write(double t,
-             const std::vector<std::reference_wrapper<std::vector<double>>> &u_1,
-             const std::vector<std::reference_wrapper<const PetscVec>> &u_2);
 
   /*! @brief Writes the dofs of a 0D-Model for a gmm vector.
    *

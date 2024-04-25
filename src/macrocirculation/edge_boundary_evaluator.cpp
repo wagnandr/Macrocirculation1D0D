@@ -29,11 +29,6 @@ void EdgeBoundaryEvaluator::init(const std::vector<double> &u_prev) {
   d_edge_boundary_communicator.update_ghost_layer(d_macro_edge_boundary_value);
 }
 
-void EdgeBoundaryEvaluator::init(const PetscVec &u_prev) {
-  evaluate_macro_edge_boundary_values(u_prev);
-  d_edge_boundary_communicator.update_ghost_layer(d_macro_edge_boundary_value);
-}
-
 template<typename VectorType>
 void EdgeBoundaryEvaluator::evaluate_macro_edge_boundary_values(const VectorType &u_prev) {
   std::vector<std::size_t> dof_indices(4, 0);

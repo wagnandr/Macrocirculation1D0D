@@ -9,7 +9,6 @@
 #include "mpi.h"
 #include <cmath>
 #include <memory>
-#include <petsc.h>
 #include <utility>
 
 #include "macrocirculation/dof_map.hpp"
@@ -17,7 +16,6 @@
 #include "macrocirculation/graph_partitioner.hpp"
 #include "macrocirculation/graph_storage.hpp"
 #include "macrocirculation/interpolate_to_vertices.hpp"
-#include "macrocirculation/petsc/petsc_ksp.hpp"
 #include "macrocirculation/vessel_formulas.hpp"
 
 namespace mc = macrocirculation;
@@ -66,7 +64,7 @@ TEST_CASE("NonLinearCharacteristicBCs", "[NonLinearCharacteristicBCs]") {
   auto dof_map = std::make_shared<mc::DofMap>(graph->num_vertices(), graph->num_edges());
   dof_map->create(MPI_COMM_WORLD, *graph, 2, degree, false);
 
-  mc::ExplicitNonlinearFlowSolver solver(PETSC_COMM_WORLD, graph, dof_map, degree);
+  mc::ExplicitNonlinearFlowSolver solver(MPI_COMM_WORLD, graph, dof_map, degree);
   solver.use_ssp_method();
 
   const auto t_max_idx = static_cast<size_t>(std::ceil(t_end / tau));

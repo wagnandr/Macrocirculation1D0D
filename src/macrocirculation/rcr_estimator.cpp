@@ -15,7 +15,6 @@
 #include "communication/mpi.hpp"
 #include "explicit_nonlinear_flow_solver.hpp"
 #include "graph_storage.hpp"
-#include "implicit_linear_flow_solver.hpp"
 #include "vessel_formulas.hpp"
 
 namespace macrocirculation {
@@ -35,10 +34,6 @@ void FlowIntegrator::reset() {
 }
 
 void FlowIntegrator::update_flow(const ExplicitNonlinearFlowSolver &solver, double tau) {
-  update_flow_abstract(solver, tau);
-}
-
-void FlowIntegrator::update_flow(const ImplicitLinearFlowSolver &solver, double tau) {
   update_flow_abstract(solver, tau);
 }
 

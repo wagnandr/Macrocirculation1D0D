@@ -11,7 +11,6 @@
 #include "communication/mpi.hpp"
 #include "dof_map.hpp"
 #include "graph_storage.hpp"
-#include "petsc/petsc_vec.hpp"
 #include "vessel_formulas.hpp"
 
 namespace macrocirculation {
@@ -47,15 +46,6 @@ CSVVesselTipWriter::CSVVesselTipWriter(MPI_Comm comm,
                          std::vector<std::shared_ptr<DofMap>>({std::move(dofmaps)}),
                          std::vector<std::string>({"p"})) {}
 
-void CSVVesselTipWriter::write(double t, const PetscVec &u) {
-  if (d_dofmaps.size() > 1)
-    throw std::runtime_error("CSVVesselTipWriter::write: method supported only for one substance");
-
-  update_time(t);
-  write_p_out();
-  write_generic(*d_dofmaps.front(), u, d_types.front());
-}
-
 void CSVVesselTipWriter::write(double t, const std::vector<double> &u) {
   if (d_dofmaps.size() > 1)
     throw std::runtime_error("CSVVesselTipWriter::write: method supported only for one substance");
@@ -63,30 +53,6 @@ void CSVVesselTipWriter::write(double t, const std::vector<double> &u) {
   update_time(t);
   write_p_out();
   write_generic(*d_dofmaps.front(), u, d_types.front());
-}
-
-void CSVVesselTipWriter::write(double t,
-                               const std::vector<std::reference_wrapper<std::vector<double>>> &u_1,
-                               const std::vector<std::reference_wrapper<const PetscVec>> &u_2) {
-  if (d_dofmaps.size() != u_1.size() + u_2.size())
-    throw std::runtime_error("CSVVesselTipWriter::write: not all expected quantities provided");
-
-  update_time(t);
-  write_p_out();
-  for (size_t k = 0; k < u_1.size(); k += 1)
-    write_generic(*d_dofmaps[k], u_1[k], d_types[k]);
-  for (size_t k = 0; k < u_2.size(); k += 1)
-    write_generic(*d_dofmaps[u_1.size() + k], u_2[k], d_types[u_1.size() + k]);
-}
-
-void CSVVesselTipWriter::write(double t, const std::vector<std::reference_wrapper<const PetscVec>> &quantities) {
-  if (d_dofmaps.size() != quantities.size())
-    throw std::runtime_error("CSVVesselTipWriter::write: not all expected quantities provided");
-
-  update_time(t);
-  write_p_out();
-  for (size_t k = 0; k < quantities.size(); k += 1)
-    write_generic(*d_dofmaps[k], quantities[k], d_types[k]);
 }
 
 template<typename VectorType>

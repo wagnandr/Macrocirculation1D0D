@@ -29,27 +29,6 @@ void VesselTreeFlowIntegrator::reset() {
   }
 }
 
-void VesselTreeFlowIntegrator::add(const PetscVec &u, double tau) {
-  for (const auto &v_id : d_graph->get_active_vertex_ids(mpi::rank(d_comm))) {
-    auto vertex = d_graph->get_vertex(v_id);
-    if (vertex->is_vessel_tree_outflow()) {
-      auto &dof_indices = d_dof_map->get_local_dof_map(*vertex).dof_indices();
-      std::vector<double> dof_values(dof_indices.size());
-      extract_dof(dof_indices, u, dof_values);
-      auto p_1d = dof_values.back();
-      auto &data = vertex->get_vessel_tree_data();
-      auto p_3d = data.p_out;
-      auto R = data.resistances.back();
-      auto level = data.resistances.size();
-      auto flow = std::pow(2, level - 1) / R * (p_1d - p_3d);
-      d_avg_data[v_id].flow += tau * flow;
-      d_avg_data[v_id].pressure_3d += tau * p_3d * 1e3;
-      d_avg_data[v_id].pressure_1d += tau * p_1d * 1e3;
-      d_avg_data[v_id].time += tau;
-    }
-  }
-}
-
 std::vector<VesselTreeFlowIntegratorResult> VesselTreeFlowIntegrator::calculate() {
   std::vector<VesselTreeFlowIntegratorResult> results;
   for (const auto &v_id : d_graph->get_vertex_ids()) {

@@ -21,7 +21,6 @@ class GraphStorage;
 class DofMap;
 class Vertex;
 class Edge;
-class PetscVec;
 
 /*!@brief Evaluates a finite element function at the macro edge boundaries
  *        and communicates the values to all ranks with an adjacent primitive.
@@ -32,9 +31,6 @@ public:
 
   /*! @brief Evaluates and communicates the values of at the macro edge boundaries. */
   void init(const std::vector<double> &u_prev);
-
-  /*! @brief Evaluates and communicates the values of at the macro edge boundaries. */
-  void init(const PetscVec &u_prev);
 
   /*! @brief Returns the boundary value at the given vertex on the given macro edge. */
   double operator()(const Vertex &vertex, const Edge &edge) const;

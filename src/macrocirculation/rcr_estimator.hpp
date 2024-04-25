@@ -36,9 +36,6 @@ public:
   /*! @brief Adds the flow contributions of the current time step to the total amount */
   void update_flow(const ExplicitNonlinearFlowSolver &solver, double tau);
 
-  /*! @brief Adds the flow contributions of the current time step to the total amount */
-  void update_flow(const ImplicitLinearFlowSolver &solver, double tau);
-
   /*! @brief Returns a data structure containing _all_ the flows and the total flow. */
   FlowData get_free_outflow_data() const;
 

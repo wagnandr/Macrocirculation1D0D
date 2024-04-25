@@ -47,14 +47,6 @@ void GraphCSVWriter::setup() {
   write_meta_file();
 }
 
-void GraphCSVWriter::add_data(const std::string &name, const PetscVec &u) {
-  if (!is_setup)
-    throw std::runtime_error("data can only be added after calling setup");
-  if (d_data_map.count(name) == 0)
-    throw std::runtime_error("key " + name + " was not added in setup phase");
-  petsc_data.emplace(name, std::cref(u));
-}
-
 void GraphCSVWriter::add_data(const std::string &name, const std::vector<double> &u) {
   if (!is_setup)
     throw std::runtime_error("data can only be added after calling setup");
@@ -72,9 +64,7 @@ void GraphCSVWriter::write(double t) {
   for (auto &data_it : d_data_map) {
     auto name = data_it.first;
 
-    if (petsc_data.count(name)) {
-      write_generic(data_it.second, petsc_data.at(name));
-    } else if (gmm_data.count(name)) {
+    if (gmm_data.count(name)) {
       write_generic(data_it.second, gmm_data.at(name));
     } else {
       throw std::runtime_error("component " + name + " was not added for writing");
@@ -98,7 +88,6 @@ void GraphCSVWriter::write_times() {
 }
 
 void GraphCSVWriter::reset_data() {
-  petsc_data.clear();
   gmm_data.clear();
 }
 

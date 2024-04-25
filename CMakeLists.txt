@@ -72,10 +72,6 @@ endif()
 # **** pthreads ****#
 find_package(Threads REQUIRED)
 
-# **** petsc ****#
-# Note: -DPETSC_DIR should point to the same directory that libmesh was compiled with
-find_package(Petsc REQUIRED)
-
 # **** eigen ***#
 find_package (Eigen3 3.3 REQUIRED)
 
@@ -157,22 +153,18 @@ if (${LibMacrocirculation_Enable_CMAKE_Debug_Build})
     message("Enable_Tests = ${LibMacrocirculation_Enable_Tests}")
 endif ()
 if (${LibMacrocirculation_Enable_Tests})
+    # get catch2 for testing
+    include(FetchContent)
+    FetchContent_Declare(
+            catch2_content
+            GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+            GIT_TAG v2.13.9
+    )
+    FetchContent_MakeAvailable(catch2_content)
+
     enable_testing()
 
     add_subdirectory(tests)
-
-    find_package(Catch2 QUIET)
-    # if cmake cannot find the package, we download it
-    if (NOT Catch2_FOUND)
-        # get catch2 for testing
-        include(FetchContent)
-        FetchContent_Declare(
-                catch2_content
-                GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-                GIT_TAG v2.13.9
-        )
-        FetchContent_MakeAvailable(catch2_content)
-    endif()
 endif ()
 
 # documentation

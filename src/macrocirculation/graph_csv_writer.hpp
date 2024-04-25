@@ -34,7 +34,6 @@ public:
 
   void setup();
 
-  void add_data(const std::string &name, const PetscVec &u);
   void add_data(const std::string &name, const std::vector<double> &u);
 
   void write(double t);
@@ -58,7 +57,6 @@ private:
 
   std::map<std::string, Data> d_data_map;
 
-  std::map<std::string, std::reference_wrapper<const PetscVec>> petsc_data;
   std::map<std::string, std::reference_wrapper<const std::vector<double>>> gmm_data;
 
 private:

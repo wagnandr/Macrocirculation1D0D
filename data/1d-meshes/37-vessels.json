@@ -31,9 +31,9 @@
     { "id": 28, "name": "cw_out_32", "peripheral_resistance": 110.8, "peripheral_compliance": 0.0062 },
     { "id": 29, "name": "cw_out_33", "peripheral_resistance": 110.8, "peripheral_compliance": 0.0062 },
     { "id": 30 },
-    { "id": 31, "name": "new_out_1" },
+    { "id": 31, "name": "new_out_1", "peripheral_resistance": 110.8, "peripheral_compliance": 0.0062 },
     { "id": 32 },
-    { "id": 33, "name": "new_out_2" }
+    { "id": 33, "name": "new_out_2", "peripheral_resistance": 110.8, "peripheral_compliance": 0.0062 }
   ],
   "vessels": [
     {

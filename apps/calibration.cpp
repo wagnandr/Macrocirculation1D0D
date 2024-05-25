@@ -31,8 +31,8 @@ int main(int argc, char *argv[]) {
 
   cxxopts::Options options(argv[0], "Calibration for the nonlinear solver");
   options.add_options()                                                                                                                     //
-    ("mesh-file", "path to the input file", cxxopts::value<std::string>()->default_value("./data/1d-meshes/33-vessels.json"))         //
-    ("output-file", "path to the output file", cxxopts::value<std::string>()->default_value("./data/1d-boundary/33-vessels.json")) //
+    ("mesh-file", "path to the input file", cxxopts::value<std::string>()->default_value("./data/1d-meshes/37-vessels.json"))         //
+    ("output-file", "path to the output file", cxxopts::value<std::string>()->default_value("./data/1d-boundary/37-vessels.json")) //
     ("inflow-vertex-name", "the name of the inflow vertex", cxxopts::value<std::string>()->default_value("cw_in"))                          //
     ("heart-amplitude", "the amplitude of a heartbeat", cxxopts::value<double>()->default_value("485.0"))                                   //
     ("heart-period", "the period of one heartbeat", cxxopts::value<double>()->default_value("1."))                                          //
@@ -131,9 +131,9 @@ int main(int argc, char *argv[]) {
   std::set<size_t> flow_body_vessels = {8};
 
   std::vector< OutletParition > outlet_partitions = {
-    { "head", 0.15, {10, 13, 22, 23, 26, 27, 28, 29}},
+    { "head", 0.15, {10, 13, 22, 23, 26, 27, 28, 29, 31, 33}},
     // { "left_arm", 0.05, {15, 34, 36, 37, 38, 39}},
-    { "left_arm", 0.05, {15, 32, 33}},
+    { "left_arm", 0.05, {15 }},
     { "right_arm", 0.05, {16}},
     { "body", 0.75, {8}},
   };

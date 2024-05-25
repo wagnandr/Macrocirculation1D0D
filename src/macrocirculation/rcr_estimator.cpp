@@ -72,6 +72,29 @@ FlowData FlowIntegrator::get_free_outflow_data() const {
   return data;
 };
 
+FlowData FlowIntegrator::get_windkessel_outflow_data() const {
+  // TODO: This is a direct copy of get_free_outflow_data with one change. Refactor this
+  FlowData data;
+  data.total_flow = 0;
+
+  for (auto v_id : d_graph->get_vertex_ids()) {
+    auto v = d_graph->get_vertex(v_id);
+    if (v->is_windkessel_outflow()) {  // CHANGE!
+      auto &e = *d_graph->get_edge(v->get_edge_neighbors()[0]);
+      double q = 0;
+      if (e.rank() == mpi::rank(MPI_COMM_WORLD)) {
+        q = d_total_flows.at(v_id);
+      }
+      std::cout << v_id << " " << q << std::endl;
+      MPI_Bcast(&q, 1, MPI_DOUBLE, e.rank(), MPI_COMM_WORLD);
+      data.flows[v_id] = q;
+      data.total_flow += q;
+    }
+  }
+  return data;
+};
+
+
 double get_total_edge_capacitance(const std::shared_ptr<GraphStorage> &graph) {
   double total_C_edge = 0;
   for (auto e_id : graph->get_active_edge_ids(mpi::rank(MPI_COMM_WORLD))) {

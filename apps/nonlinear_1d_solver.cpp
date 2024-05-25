@@ -21,6 +21,7 @@
 #include "macrocirculation/interpolate_to_vertices.hpp"
 #include "macrocirculation/quantities_of_interest.hpp"
 #include "macrocirculation/vessel_formulas.hpp"
+#include "macrocirculation/rcr_estimator.hpp"
 
 namespace mc = macrocirculation;
 
@@ -39,6 +40,7 @@ int main(int argc, char *argv[]) {
       ("heart-amplitude", "the amplitude of a heartbeat", cxxopts::value<double>()->default_value("485.0"))                                                         //
       ("tau", "time step size", cxxopts::value<double>()->default_value(std::to_string(2.5e-4 / 16.)))                                                              //
       ("tau-out", "time step size for the output", cxxopts::value<double>()->default_value("1e-2"))                                                                 //
+      ("t-start-averaging", "Time when to start averaging flows", cxxopts::value<double>()->default_value("4"))                                                                             //
       ("t-end", "Endtime for simulation", cxxopts::value<double>()->default_value("5"))                                                                             //
       ("h,help", "print usage");
     options.allow_unrecognised_options(); // for petsc
@@ -77,6 +79,8 @@ int main(int argc, char *argv[]) {
 
     auto dof_map_flow = std::make_shared<mc::DofMap>(graph->num_vertices(), graph->num_edges());
     dof_map_flow->create(MPI_COMM_WORLD, *graph, 2, degree, false);
+
+    const double t_start_averaging = args["t-start-averaging"].as<double>();
 
     const double t_end = args["t-end"].as<double>();
     const std::size_t max_iter = 160000000;
@@ -161,6 +165,8 @@ int main(int argc, char *argv[]) {
 
     const auto begin_t = std::chrono::steady_clock::now();
 
+    mc::FlowIntegrator flow_integrator(graph);
+
     for (std::size_t it = 0; it < max_iter; it += 1) {
       auto start = std::chrono::high_resolution_clock::now();
       flow_solver->solve(tau, t);
@@ -180,13 +186,35 @@ int main(int argc, char *argv[]) {
       // break
       if (t > t_end + 1e-12)
         break;
+
+      // add total flows
+      if (t >= t_start_averaging)
+        flow_integrator.update_flow(*flow_solver, tau);
     }
 
     const auto end_t = std::chrono::steady_clock::now();
     const auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end_t - begin_t).count();
-    std::cout << "time = " << elapsed_ms * 1e-6 << " s" << std::endl;
+    if (mc::mpi::rank(MPI_COMM_WORLD) == 0)
+    {
+      std::cout << "time = " << elapsed_ms * 1e-6 << " s" << std::endl;
+      std::cout << "total time flow solver = " << flow_solution_time << ", average = " << flow_solution_time / num_iteration << ", iteration = " << num_iteration << std::endl;
+    }
 
-    std::cout << "total time flow solver = " << flow_solution_time << ", average = " << flow_solution_time / num_iteration << ", iteration = " << num_iteration << std::endl;
+    auto flows = flow_integrator.get_windkessel_outflow_data();
+
+    if (mc::mpi::rank(MPI_COMM_WORLD) == 0)
+    {
+      for (auto t : flows.flows) {
+        auto vertex = graph->get_vertex(t.first);
+        auto flow = t.second;
+
+        std::cout << "vertex name = " << vertex->get_name()
+                  << ", id = " << vertex->get_id()
+                  << ", flow = " << flow
+                  << ", average flow = " << flow / (t_end - t_start_averaging)
+                  << std::endl;
+      }
+    }
   }
 
   MPI_Finalize();

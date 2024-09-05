@@ -30,6 +30,7 @@ target_link_libraries(${ProjectName}ConvergenceStudy ${ProjectLib})
 add_executable(${ProjectName}Nonlinear1DSolver nonlinear_1d_solver.cpp)
 target_link_libraries(${ProjectName}Nonlinear1DSolver ${ProjectLib})
 target_link_libraries(${ProjectName}Nonlinear1DSolver cxxopts)
+target_link_libraries(${ProjectName}Nonlinear1DSolver nlohmann_json::nlohmann_json)
 
 add_executable(${ProjectName}Calibration calibration.cpp)
 target_link_libraries(${ProjectName}Calibration ${ProjectLib})

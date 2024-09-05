@@ -22,10 +22,42 @@
 #include "macrocirculation/quantities_of_interest.hpp"
 #include "macrocirculation/vessel_formulas.hpp"
 #include "macrocirculation/rcr_estimator.hpp"
+#include <nlohmann/json.hpp>
 
 namespace mc = macrocirculation;
 
 constexpr std::size_t degree = 2;
+
+void output_flows(const std::string &filepath, const mc::GraphStorage &graph, const mc::FlowData &flows, double t_end, double t_start_averaging) {
+  using json = nlohmann::json;
+
+  json j;
+
+  auto vertices_list = json::array();
+
+  for (auto t : flows.flows) {
+    auto vertex = graph.get_vertex(t.first);
+    auto edge = graph.get_edge(vertex->get_edge_neighbors()[0]);
+    const auto r = edge->get_physical_data().radius;
+    auto flow = t.second;
+    json vessel_obj = {
+      {"vertex_name", vertex->get_name()},
+      {"average_flow", flow / (t_end - t_start_averaging)},
+      {"radius", r}
+    };
+    vertices_list.push_back(vessel_obj);
+  }
+
+  j["vertex_flow_data"] = vertices_list;
+  j["unit"] = {
+    {"average_flow", "cm^3/s"},
+    {"radius", "cm"}
+  };
+  j["comments"] = "Formula for flows: Q_cap = (r_cap / r_art)^gamma * Q_art";
+
+  std::ofstream f(filepath, std::ios::out);
+  f << j.dump(1);
+}
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
@@ -40,8 +72,8 @@ int main(int argc, char *argv[]) {
       ("heart-amplitude", "the amplitude of a heartbeat", cxxopts::value<double>()->default_value("485.0"))                                                         //
       ("tau", "time step size", cxxopts::value<double>()->default_value(std::to_string(2.5e-4 / 16.)))                                                              //
       ("tau-out", "time step size for the output", cxxopts::value<double>()->default_value("1e-2"))                                                                 //
-      ("t-start-averaging", "Time when to start averaging flows", cxxopts::value<double>()->default_value("4"))                                                                             //
-      ("t-end", "Endtime for simulation", cxxopts::value<double>()->default_value("5"))                                                                             //
+      ("t-start-averaging", "Time when to start averaging flows", cxxopts::value<double>()->default_value("0"))                                                                             //
+      ("t-end", "Endtime for simulation", cxxopts::value<double>()->default_value("0.01"))                                                                             //
       ("h,help", "print usage");
     options.allow_unrecognised_options(); // for petsc
     auto args = options.parse(argc, argv);
@@ -201,6 +233,8 @@ int main(int argc, char *argv[]) {
     }
 
     auto flows = flow_integrator.get_windkessel_outflow_data();
+
+    output_flows("flows.json", *graph, flows, t_end, t_start_averaging);
 
     if (mc::mpi::rank(MPI_COMM_WORLD) == 0)
     {

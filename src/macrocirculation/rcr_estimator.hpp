@@ -39,6 +39,8 @@ public:
   /*! @brief Returns a data structure containing _all_ the flows and the total flow. */
   FlowData get_free_outflow_data() const;
 
+  FlowData get_windkessel_outflow_data() const;
+
 protected:
   std::shared_ptr<GraphStorage> d_graph;
 
